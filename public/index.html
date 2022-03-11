@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Global</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.3/socket.io.js"></script>
+    <script src="cor.js"></script>
+
+
+    <link rel="stylesheet" href="styles.css">
+
+
+</head>
+<body>
+    <div class="content">
+        <form id="access" class="col-6 col-lg-3">
+            <input type="text" class="form-control" name="username" autocomplete="off"
+                placeholder="Digite seu usuário:">
+            <button type="submit" class="btn btn-lg btn-primary col-12">Acessar Chat</button>
+
+        </form>
+        <form id="chat" class="col-2 col-md-4 col-lg-6 centered">
+            <div class="users"></div>
+            <div class="content-messages">
+                <p class="messages" id="messages"></p>
+                </button>
+            </div>
+            <div class="content-input">
+                <input type="text" class="form-control" name="message" id="message_content" onkeyup="showButton()"
+                    autocomplete="off" placeholder="Digite sua mensagem:">
+                <div class="buttons">
+                    <button type="submit" id="enviar">
+                        <span class="material-icons">
+                            enviar
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <script type="text/javascript">
+
+        var socket = io('http://localhost:1998');
+        var userColor = getRandomColor();
+
+        $('#access').submit(function (event) {
+            event.preventDefault()
+
+            var userName = $('input[name=username]').val()
+            if (userName != '') {
+                $('#access').hide()
+                $('#chat').show()
+            }
+        })
+
+        function showButton() {
+            var input = document.querySelector('#message_content')
+            if (input.value == '') {
+                document.querySelector('#enviar').style.display = 'none'
+            } else {
+                document.querySelector('#enviar').style.display = 'inline'
+            }
+        }
+
+        $('#chat').submit(function (event) {
+            event.preventDefault();
+            var id = socket.id;
+            var author = $('input[name=username]').val();
+            var message = $('input[name=message]').val();
+
+            if (author.length && message.length) {
+                var messageObj = {
+                    author: author,
+                    message: message,
+                    id: id,
+                    color: `#${userColor}`
+                };
+                renderMessage(messageObj);
+                socket.emit('sendMessage', messageObj);
+                $('#message_content').val('').focus()
+                showButton()
+            }
+        });
+
+        function renderMessage(message) {
+            const messageClass = (message.id == socket.id) ? 'my_message' : 'message'
+            const authorClass = (message.id == socket.id) ? '' : message.author
+            $('.messages').append(`<p class="${messageClass}"><strong style='color:${message.color}'> ${authorClass}</strong> ${message.message}</p>`)
+        }
+
+        socket.on('lastMessages', function(messages){
+            for(message of messages){
+                lastMessages(messages)
+            }
+        });
+
+        socket.on('receiveMessage', function (messages) {
+            renderMessage(messages);
+        });
+
+    </script>
+</body>
+</html>
